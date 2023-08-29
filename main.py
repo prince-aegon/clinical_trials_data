@@ -97,6 +97,22 @@ def get_address_of_trial(file_name):
 
     return response
 
+def get_location_countries(file_name):
+    tree = ET.parse(f'{file_name}')
+    root = tree.getroot()
+
+    location_country = root.find('location_countries')
+
+    try:
+        resp = {}
+        for params in location_country:
+            resp[params.tag] = params.text
+        return resp
+    except Exception as e:
+        return {}
+
+
+
     
 
 current_dir = os.getcwd()
@@ -110,6 +126,7 @@ if os.path.exists(folder_path) and os.path.isdir(folder_path):
     date_formats_for_duration = [0] * 3
     number_of_months = []
     count_facility_name, count_facility_address = 0, 0
+    countries_of_facilities = {}
 
     for file_name in file_names:
         if not file_name.endswith(".xml"):
@@ -148,11 +165,18 @@ if os.path.exists(folder_path) and os.path.isdir(folder_path):
             count_facility_name += 1
         if facilities["address"] != {}:
             count_facility_address += 1
-        # print(f'{file_name} -> {facilities}')
+
+        location_country = get_location_countries(f'{folder_path}/{file_name}')
+        if "country" in location_country:
+            if location_country["country"] in countries_of_facilities:
+                countries_of_facilities[location_country["country"]] += 1
+            else:
+                countries_of_facilities[location_country["country"]] = 1
+        print(f'{file_name} -> {location_country}')
 
 
             
-    
+
 
 print(f'Total files : {total_files}')
 print(f'Number of Actual, Anticipated, None tags: {enrollment_type_count}')
@@ -174,3 +198,4 @@ plt.show()
 
 
 print(f'Number of facilities with name -> {count_facility_name}, address -> {count_facility_address}')
+print(countries_of_facilities)
