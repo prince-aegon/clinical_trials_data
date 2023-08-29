@@ -4,6 +4,24 @@ import re
 import matplotlib.pyplot as plt
 import numpy as np
 
+
+# global variables
+
+enrollment_tags_present, total_files, completed_status = 0, 0, 0
+enrollment_type_count = {}
+date_formats_for_duration = [0] * 3
+number_of_months = []
+count_facility_name, count_facility_address = 0, 0
+countries_of_facilities = {}
+gender_details = {}
+min_age_details = {}
+max_age_details = {}
+gender_count = 0
+min_age_count = 0
+max_age_count = 0
+min_age_NA = 0
+max_age_NA = 0
+
 def get_enrollment(file_name):
     tree = ET.parse(f'{file_name}')
     root = tree.getroot()
@@ -111,8 +129,45 @@ def get_location_countries(file_name):
     except Exception as e:
         return {}
 
+def get_eligibility_details(file_name):
+    tree = ET.parse(f'{file_name}')
+    root = tree.getroot()
+    try:
+        eligibility_details = root.find('eligibility')
+        gender = eligibility_details.find('gender').text
+        if gender in gender_details:
+            gender_details[gender] += 1
+        else:
+            gender_details[gender] = 1
+        print(f'{file_name} -> {gender} ')
 
+    except Exception as e:
+        print(e)
+        return -1
+    
+    try: 
+        min_age = eligibility_details.find('minimum_age').text
+        if min_age in min_age_details:
+            min_age_details[min_age] += 1
+        else:
+            min_age_details[min_age] = 1
+        print(f'{file_name} -> {min_age} ')
 
+    except Exception as e:
+        print(e)
+        return -1
+    
+    try:
+        max_age = eligibility_details.find('maximum_age').text
+        if max_age in max_age_details:
+            max_age_details[max_age] += 1
+        else:
+            max_age_details[max_age] = 1
+        print(f'{file_name} -> {max_age} ')
+
+    except Exception as e:
+        print(e)
+        return -1
     
 
 current_dir = os.getcwd()
@@ -121,18 +176,15 @@ folder_path = f'{current_dir}/data'
 if os.path.exists(folder_path) and os.path.isdir(folder_path):
 
     file_names = os.listdir(folder_path)
-    enrollment_tags_present, total_files, completed_status = 0, 0, 0
-    enrollment_type_count = {}
-    date_formats_for_duration = [0] * 3
-    number_of_months = []
-    count_facility_name, count_facility_address = 0, 0
-    countries_of_facilities = {}
-
     for file_name in file_names:
         if not file_name.endswith(".xml"):
             continue
         total_files += 1
-        
+
+        result = get_eligibility_details(f'{folder_path}/{file_name}')
+        if result == -1:
+            pass
+
         result = get_enrollment(f'{folder_path}/{file_name}')
         if result == -1:
             pass
@@ -199,3 +251,25 @@ plt.show()
 
 print(f'Number of facilities with name -> {count_facility_name}, address -> {count_facility_address}')
 print(countries_of_facilities)
+
+
+for key in gender_details:
+    print(key, gender_details[key])
+    gender_count +=gender_details[key]
+
+for key in min_age_details:
+    # print(key, min_age_details[key])
+    min_age_count +=min_age_details[key]
+
+for key in max_age_details:
+    # print(key, max_age_details[key])
+    max_age_count +=max_age_details[key]
+
+min_age_NA = min_age_details["N/A"]
+max_age_NA = max_age_details["N/A"]
+
+print(f'Total gender count is : {gender_count}')
+print(f'Total min_age_count is : {max_age_count}')
+print(f'Total max_age_count is : {min_age_count}')
+print(f'Total min_age_N/A count is: {min_age_NA}')
+print(f'Total max_age_N/A count is: {max_age_NA}')
