@@ -3,6 +3,7 @@ import os
 import re
 import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
 
 
 # global variables
@@ -21,6 +22,13 @@ min_age_count = 0
 max_age_count = 0
 min_age_NA = 0
 max_age_NA = 0
+
+file_name_list = []
+enrollment_rate_list = []
+duration_list = []
+start_date_list = []
+completion_date_list = []
+
 
 def get_enrollment(file_name):
     tree = ET.parse(f'{file_name}')
@@ -74,19 +82,32 @@ def get_date_format(file_name):
     tree = ET.parse(f'{file_name}')
     root = tree.getroot()
 
-
     start_date_element = root.find('start_date')
+    
     end_date_element = root.find('completion_date')
-
+    
     pattern = r"^(January|February|March|April|May|June|July|August|September|October|November|December) \d{4}$"
     try:
+
         if re.match(pattern, start_date_element.text) and re.match(pattern, end_date_element.text):
+            start_date_list.append(start_date_element.text)
+            completion_date_list.append(end_date_element.text)
+
             return (2, start_date_element.text, end_date_element.text)
         elif re.match(pattern, start_date_element.text) or re.match(pattern, end_date_element.text):
+            start_date_list.append(start_date_element.text)
+            completion_date_list.append(end_date_element.text)
+            
             return (1, start_date_element.text, end_date_element.text)
         else:
+            start_date_list.append(start_date_element.text)
+            completion_date_list.append(end_date_element.text)
+
             return (0, start_date_element.text, end_date_element.text)
     except Exception as e:
+        start_date_list.append("00")
+        completion_date_list.append("00")
+
         return (-1, -1, -1)
     
 
@@ -175,22 +196,27 @@ folder_path = f'{current_dir}/data'
 
 if os.path.exists(folder_path) and os.path.isdir(folder_path):
 
+    enrollment_count = 0
+    num_of_days = 1
     file_names = os.listdir(folder_path)
     for file_name in file_names:
+        
         if not file_name.endswith(".xml"):
             continue
         total_files += 1
-
+        file_name_list.append(file_name)
         result = get_eligibility_details(f'{folder_path}/{file_name}')
         if result == -1:
             pass
 
         result = get_enrollment(f'{folder_path}/{file_name}')
         if result == -1:
+
             pass
             # print(f'{file_name} -> Enrollment tag absent')
         else:
             enrollment_tags_present += 1
+            enrollment_count = result[1]
             if result[0] in enrollment_type_count:
                 enrollment_type_count[result[0]] += 1
             else:
@@ -208,9 +234,14 @@ if os.path.exists(folder_path) and os.path.isdir(folder_path):
         if format[0] != -1:
             date_formats_for_duration[format[0]] += 1
             if format[0] == 2:
-                number_of_months.append(get_average(format[1], format[2]))
-
+                month_freq = get_average(format[1], format[2])
+                number_of_months.append(month_freq)
+                num_of_days = 30*month_freq
+                num_of_days = max(num_of_days,1)
         
+        enrollment_rate_list.append(int(enrollment_count)/num_of_days)
+        duration_list.append(num_of_days)
+
         # Get address
         facilities = get_address_of_trial(f'{folder_path}/{file_name}')
         if facilities["name"] != "":
@@ -226,9 +257,15 @@ if os.path.exists(folder_path) and os.path.isdir(folder_path):
                 countries_of_facilities[location_country["country"]] = 1
         print(f'{file_name} -> {location_country}')
 
+print(len(file_name_list))
+print(len(enrollment_rate_list))
+print(len(start_date_list))
+print(len(completion_date_list))
+dict = {'file_name': file_name_list, 'enrollment_rate': enrollment_rate_list, 'duration': duration_list, 'start_date': start_date_list, 'completion_date':completion_date_list}
 
-            
-
+df = pd.DataFrame(dict)
+df.to_csv('file1.csv')
+          
 
 print(f'Total files : {total_files}')
 print(f'Number of Actual, Anticipated, None tags: {enrollment_type_count}')
