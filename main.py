@@ -85,10 +85,14 @@ def get_date_format(file_name):
     start_date_element = root.find('start_date')
     
     end_date_element = root.find('completion_date')
+    end_date_completion_element = root.find('primary_completion_date')
+
     
     pattern = r"^(January|February|March|April|May|June|July|August|September|October|November|December) \d{4}$"
     try:
-
+        if root.find('completion_date') is None and root.find('primary_completion_date') is not None:
+            end_date_element = end_date_completion_element
+        
         if re.match(pattern, start_date_element.text) and re.match(pattern, end_date_element.text):
             start_date_list.append(start_date_element.text)
             completion_date_list.append(end_date_element.text)
