@@ -1,0 +1,12 @@
+X:
+file_id
+start_date
+end_date
+location - country
+text_data
+    brief summary
+    detailed summary
+    eligibility criteria
+
+y:
+enrollment_rate
