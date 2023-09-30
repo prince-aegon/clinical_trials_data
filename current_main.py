@@ -2,6 +2,19 @@ import xml.etree.ElementTree as ET
 import os
 import pandas as pd
 from datetime import datetime
+# import tensorflow as tf
+# import tensorflow_hub as hub
+# import tensorflow_text as text
+from transformers import AutoTokenizer, AutoModelForSequenceClassification, DataCollatorWithPadding
+import torch
+from torch.utils.data import DataLoader
+from transformers import AutoTokenizer, AutoModel
+
+
+
+# bert_preprocess = hub.KerasLayer("https://tfhub.dev/tensorflow/bert_en_uncased_preprocess/3")
+# bert_encoder = hub.KerasLayer("https://tfhub.dev/tensorflow/bert_en_uncased_L-12_H-768_A-12/4")
+
 
 def get_start_date(file_name):
     tree = ET.parse(f'{file_name}')
@@ -86,14 +99,20 @@ def get_enrollment_data(file_name):
         return 0
 
 
-column= ['file_id', 'start_date', 'end_date', 'location', 'text', 'enrollment']
+column= ['file_id', 'start_date', 'end_date', 'location', 'text', 'enrollment','textExt']
+
+model_name = "dmis-lab/biobert-v1.1"
+tokenizer = AutoTokenizer.from_pretrained(model_name)
+model = AutoModel.from_pretrained(model_name)
+
 current_dir = os.getcwd()
 folder_path = f'{current_dir}/data'
 
 if os.path.exists(folder_path) and os.path.isdir(folder_path):
-
+    c = 0
     file_names = os.listdir(folder_path)
     data = []
+    
     for file_name in file_names:
         if not file_name.endswith(".xml"):
             continue
@@ -107,7 +126,16 @@ if os.path.exists(folder_path) and os.path.isdir(folder_path):
         text_data = get_text_data(file_path)
         enrollment = get_enrollment_data(file_path)
 
-        data.append([file_name, start_date, end_date, location, text_data, enrollment])
+        inputs = tokenizer(text_data, return_tensors="pt", padding=True, truncation=True)
+
+        with torch.no_grad():
+            outputs = model(**inputs)
+            embeddings = outputs.last_hidden_state  # This contains the embeddings for all tokens in the input text
+
+        textCnv = embeddings.mean(dim=1)  
+        data.append([file_name, start_date, end_date, location, text_data, enrollment,textCnv])
+        print(c)
+        c = c+1
 
 df = pd.DataFrame(data = data, columns=column)
 
@@ -115,6 +143,13 @@ df['start_date'] = pd.to_datetime(df['start_date'], errors='coerce')
 df['end_date'] = pd.to_datetime(df['end_date'], errors='coerce')
 
 df['DaysBetween'] = (df['end_date'] - df['start_date']).dt.days.where(df['start_date'].notna() & df['end_date'].notna())
+df = df[df['DaysBetween'] > 0]
+df = df[df['DaysBetween'] < 4000]
+
 df['Enrollment_rate'] = df['enrollment'] / df['DaysBetween']
 df['Enrollment_rate'] = df['Enrollment_rate'].fillna(0)
+
+
 df.to_csv('output.csv', index=False)
+
+# df.to_json('file.json', orient = 'split', compression = 'infer', index = 'true')
