@@ -2,13 +2,12 @@ import xml.etree.ElementTree as ET
 import os
 import pandas as pd
 from datetime import datetime
-# import tensorflow as tf
-# import tensorflow_hub as hub
-# import tensorflow_text as text
+import numpy as np
 from transformers import AutoTokenizer, AutoModelForSequenceClassification, DataCollatorWithPadding
 import torch
 from torch.utils.data import DataLoader
 from transformers import AutoTokenizer, AutoModel
+
 
 
 
@@ -126,14 +125,26 @@ if os.path.exists(folder_path) and os.path.isdir(folder_path):
         text_data = get_text_data(file_path)
         enrollment = get_enrollment_data(file_path)
 
-        inputs = tokenizer(text_data, return_tensors="pt", padding=True, truncation=True)
+        glove_model_path = "glove.6B.50d.txt\glove.6B.50d.txt"
+        word_vectors = {}
+        with open(glove_model_path, encoding="utf-8") as f:
+            for line in f:
+                values = line.split()
+                word = values[0]
+                vector = np.asarray(values[1:], dtype="float32")
+                word_vectors[word] = vector
+        input_text = text_data
+        tokens = input_text.lower().split()
+        text_vector = np.mean([word_vectors.get(token, np.zeros(50)) for token in tokens], axis=0)
 
+        inputs = tokenizer(text_data, return_tensors="pt", padding=True, truncation=True)
+        
         with torch.no_grad():
             outputs = model(**inputs)
             embeddings = outputs.last_hidden_state  # This contains the embeddings for all tokens in the input text
 
         textCnv = embeddings.mean(dim=1)  
-        data.append([file_name, start_date, end_date, location, text_data, enrollment,textCnv])
+        data.append([file_name, start_date, end_date, location, text_data, enrollment, textCnv, text_vector])
         print(c)
         c = c+1
 
