@@ -19,7 +19,6 @@ def get_f1(y_true, y_pred): #taken from old keras source code
     return f1_val
 
 
-
 print(df.columns)
 
 X = df.drop(columns=['Unnamed: 0','file_id','start_date','end_date','location','text','enrollment','Enrollment_rate','bioBert_values'], axis=1)
@@ -34,16 +33,10 @@ model = models.Sequential()
 
 
 # Add a Convolutional layer
-# model.add(layers.Conv1D(32, (3, 3), activation='relu', input_shape=(769,1)))
 
 model.add(layers.Conv1D(64, kernel_size=3, activation='relu', input_shape=(769, 1)))
 
-
-# Add a MaxPooling layer
-# model.add(layers.MaxPooling2D((2, 2)))
-
 model.add(layers.MaxPooling1D(pool_size=2))
-
 
 model.add(layers.Flatten())
 
@@ -52,21 +45,6 @@ model.add(layers.Dense(128, activation='relu'))
 
 # Add the output layer
 model.add(layers.Dense(10, activation='sigmoid'))
-
-# # Add another Convolutional layer
-# model.add(layers.Conv2D(64, (3, 3), activation='relu'))
-
-# # Add another MaxPooling layer
-# model.add(layers.MaxPooling2D((2, 2)))
-
-# Add a Flatten layer
-# model.add(layers.Flatten())
-
-# Add a fully connected (Dense) layer
-# model.add(layers.Dense(64, activation='relu'))
-
-# Add the output layer
-# model.add(layers.Dense(1, activation='sigmoid'))
 
 # Compile the model
 model.compile(optimizer='adam',
